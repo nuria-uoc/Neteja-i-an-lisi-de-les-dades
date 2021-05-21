@@ -1,0 +1,1079 @@
+---
+title: "PAC4 - Tipologia i cicle de vida de les dades"
+author: "N.Aguilera i J.A.Reina"
+date: '`r format(Sys.Date(),"%e de %B, %Y")`'
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(ggplot2)
+library(kableExtra) 
+library(VIM)   # KNN
+library('GGally')   # ggcorr
+library('pheatmap')  # heatmap
+library('RColorBrewer')
+library(ResourceSelection) # test Hosman-Lemeshow
+library(pROC) # Corba ROC
+library(cluster) # kmeans
+library(C50) # arbre de decisió
+library(gmodels) # matriu de confusió
+library(caret) # matriu de confusió
+```
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 1.- Descripció del dataset. Perquè és important i quina pregunta/problema pretén respondre?
+
+<br/>
+
+El dataset s'ha obtingut de la web 'https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009' i dins d'aquesta s'ha descarregat el fitxer 'winequality-red.csv'. El conjunt de dades d'aquest fitxer conté informació de la variant vermella del vi portugués anomenat _'Vinho Verde'_ que es va originar a la provincia del Minho en el extrem nord de Portugal. Concretament està format per variables fisicoquímiques i sensorials. Indicar que no conté informació dels tipus de raïm, marca, preu de venda, etc. que identifiquen un vi concret. 
+
+Sovint es diu que el gran vi s'elabora a la vinya, no al celler. No obstant això, els enòlegs tenen la capacitat de modificar certs aspectes dels vins que elaboren, com el nivell d'acidesa, dolçor o alcohol, així com la vida útil. Però quins aspectes han de modificar els enòlegs per afectar positivament les percepcions i/o vendes dels seus vins? El conèixement de determinades propietats fisioquímiques i la qualitat percebuda dels vins, permet prendre decisions més fonamentades durant la seva elaboració.
+
+La característica del vi de major interès es la variable _quality_, que fa referència a la qualitat del vi negre. També té gran interès conèixer com la resta de variables afecten aquesta qualitat, que podrà estar determinada per una o vàries d'aquestes característiques o variables. L'objectiu serà realitzar diferents modelitzacions per veure la relació entre la qualitat del vi i la resta de components, característiques o proves fisicoquímicas.
+
+Aquest conjunt de dades permeten realitzar tasques de classificació i regressió i per tant poden donar resposat a diferents preguntes o problemes que es plantegen:
+
+ - Quines propietats fisioquímiques determinen la qualitat d'un vi?
+ 
+ - Quines característiques d'aquest vi son les que tenen més influència en la determinació de la qualitat del vi? Es a dir, quines donen més informació sobre la seva qualitat?
+ 
+ - A partir dels components es pot predir si un vi serà bo?
+ 
+ - Es pot determinar quantes classes de vi existeixen, les seves qualitats i si aquests diferents nivells de qualitat s'han establert correctament?
+ 
+ - Existeixen paràmetres o regles per determinar la qualitat d'un vi?, quines son?
+
+<br/>
+
+_Bibliografia_:
+
+<https://datauab.github.io/red_wine_quality/#:~:text=4.%20Data%20Cleaning%20and%20Checking%20%C2%B6%20%20,%20%201.9%20%206%20more%20rows%20>
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 2.- Integració i selecció de les dades d’interès a analitzar.
+
+<br/>
+
+En primer lloc es descarrega el fitxer ___'winequality-red.csv'___ de la web <https://www.kaggle.com/> a local. Després es carrega a _rStudio_ reanomenant-lo a ___wine_red___ i es realitza un anàlisi de la seva estructura.
+
+```{r,eval=TRUE,echo=TRUE}
+wine_red <- read.csv("winequality-red.csv", sep=",", header=TRUE, stringsAsFactors = FALSE, na.strings = NA)
+dim(wine_red)
+str(wine_red)
+head(wine_red,10)
+```
+
+El fitxer està format per __1599 observacions i 12 variables__ de tipus numèriques (11 son num i 1 int).
+El contingut de les variables corresponen a propietats organolèptiques que es detallen a continuació:
+
+<br/>
+
+__Variables d'entrada__ basades en test fisicoquímics:
+
+  ***1 - fixed.acidity***: contingut d'acidesa degut a àcids no-volàtils (no s'evaporen amb facilitat). (_tartaric acid_ - $g/dm^3$)
+   
+  ***2 - volatile.acidity***: contingut en àcids volàtils com l'àcid acètic. A nivells massa alts pot conduir a un gust desagradable de vinagre. (_acetic acid_ - $g/dm^3$)
+   
+   ***3 - citric.acid***: contingut en àcid cítric. En petites quantitats pot afegir frescor i sabor als vins.($g/dm^3$)
+   
+   ***4 - residual.sugar***: Contingut residual en sucre, es a dir, la quantitat de sucre que queda després de les parades de fermentació. Per una banda es estrany trobar vins amb menys d'1 gram/litre i els vins de més de 45 grams/litre es consideren dolços. ($g/dm^3$)
+   
+   ***5 - chlorides***: la quantitat de sal en el vi. (_sodium chloride_ - $g/dm^3$)
+   
+   ***6 - free.sulfur.dioxide***: Contingut en $SO_2$. La forma lliure d'$SO_2$ existeix en equilibri entre el $SO_2$ molecular (com un gas dissolt) i l'ió bisulfit. Prevé el creixement microbià i l'oxidació del vi. ($mg/dm^3$)
+   
+   ***7 - total.sulfur.dioxide***: contingut total en $SO_2$. Quantitat de formes lliures i lligades de $SO_2$. En baixes concentracions, el $SO_2$ es majoritàriament indetectable en vi. Però en concentraciobns gratuïtes de $SO_2$ de més de 50 ppm, $SO_2$ es fa evident al nas i al gust. ($mg/dm^3$)
+   
+   ***8 - density***: Densitat del vi, que depén dels sucres i del percentatge d'alcohol. ($g/cm^3$)  
+   
+   ***9 - pH***: mesura de l'acidesa. Descriu com és d'àcid o bàsic un vi en una escala de 0 (molt àcid) a 14 (molt bàsic). La majoria dels vins es troben entre 3-4 a l'escala de PH.
+   
+   ***10 - sulphates***: Continguts en sulfats que es fan servir per aturar les fermentacions. Corrrespon a un additiu vitivinícola que pot contribuir als nivells de gas de diòxis de sofre ($SO_2$), que actua com a antimicrobià i antioxidant.  (_potassium sulphate_ - $g/dm3$)
+   
+   ***11 - alcohol***: indica el contingut en etanol. (% _by volume_)
+
+<br/>
+
+__Variables de sortida__ (basada en dades sensorials): 
+
+   ***12 - quality*** (_score between 0 and 10_): nombre que correspon a la nota que indiquen els someliers segons la qualitat del vi que perceben.
+
+<br/>
+
+Es mostra a continuació les estadístiques descriptives dels valors de cada variable del _dataset_ de ___wine_red___. Per això es farà servir la funció ___summary()___ que permetrà mostrar els valors màxim, mínim, els quartils, la mitjana i mediana.
+
+```{r,eval=TRUE,echo=TRUE}
+summary(wine_red)
+```
+
+Es pot observar que la majoria de vins tenen com a valor de la variable dependent _quality_, un valor entre 5 i 6, concretament un 82,5% son considerats mediocres; un 13,57% es poden considerar bons vins i el 3,94% es considerarien vins dolents.
+
+Es pot considerar interessant establir una discretització o dicotomització de la variable per la realització de diferents modelitzacions. I segons si el valor es igual o major que 7, considerar un vi com a 'bo' i contràriament, considerar-lo com a 'no bo'. Així es transformaria l'escala de 10 punts en una variable dicotómica (vins bons i la resta).
+
+Es pot veure, també, que l'atribut _residual.sugar_ té un valor mínim de 0.9 g/l, un màxim de 15.5g/l i una mitjana de 2.5g/l, el que indicaria una gran desviació respecte de la mitjana. Depenen d'aquest atribut el vi es podria classificar en:
+
+  * Sec: menys de 4 g/l.
+  * Semisec: de 12 a 18 g/l.
+  * Semidolç: de 18 a 45 g/l.
+  * Dolç: més de 45 g/l.
+
+Per tant, tots els vins es troben entre secs i semisecs. Segons la mitjana serien secs.
+
+```{r,eval=TRUE,echo=TRUE}
+table(wine_red$residual.sugar)
+```
+
+Respecte a l'atribut _citric.acid_ es detecten 132 observacions amb valor 0, el que seria una mica estrany ja que tot i que la presència de citric.acid en el raïm es poc abundant, sí està present en concentracions entre 0,1 i 1g/l. 
+
+```{r,eval=TRUE,echo=TRUE}
+table(wine_red$citric.acid)
+```
+
+L _volatile.acidity_ mitjana, es de 0.52grams. Un excès d'acidesa volàtil dona com a resultat un gust de vinagre dolent. Potser els vins que tenen una qualitat menor es troben en la cua dreta en la representació del nivell més alt d'acidesa.
+
+L'atribut _total.sulfur.dioxide_, té una mitja de 46.47ppm i el valor màxim es 289, que es bastant alt, ja que el 75% es de 62 ppm.
+
+L'atribut _alcohol_ oscil·la entre el vi més lleuger amb un 8.4% i el més fort amb un 14.9%.
+
+Finalment, com l'atribut _quality_ no es una característica, sinó més aviat un resultat atribuït, caldria aplicar la funció _as.factor_ per factoritzar-lo.
+
+```{r,eval=TRUE,echo=TRUE}
+wine_red$quality=as.factor(wine_red$quality)
+```
+
+<br/>
+
+Per tenir una primera aproximació al _dataset_, es realitza una visualització de la distribució de les dades amb histogrames.
+
+```{r,eval=TRUE,echo=TRUE}
+par(mfrow=c(1,3))
+hist(wine_red$fixed.acidity, main = "Histograma de citric.acid", ylab = "Frecuencia")
+hist(wine_red$volatile.acidity, main = "Histograma de volatile.acidity", ylab = "Frecuencia")
+hist(wine_red$citric.acid, main = "Histograma de citric.acid", ylab = "Frecuencia")
+hist(wine_red$residual.sugar, main = "Histograma de frecuencias", ylab = "Frecuencia")
+hist(wine_red$chlorides, main = "Histograma de chlorides", ylab = "Frecuencia")
+hist(wine_red$free.sulfur.dioxide, main = "Histograma de free.sulfur.dioxide", ylab = "Frecuencia")
+hist(wine_red$total.sulfur.dioxide, main = "Histograma de total.sulfur.dioxide", ylab = "Frecuencia")
+hist(wine_red$density, main = "Histograma de pH", ylab = "Frecuencia")
+hist(wine_red$pH, main = "Histograma de citric.acid", ylab = "Frecuencia")
+hist(wine_red$sulphates, main = "Histograma de sulphates", ylab = "Frecuencia")
+hist(wine_red$alcohol, main = "Histograma de alcohol", ylab = "Frecuencia")
+```
+
+On es pot veure, tot i que s'aprofundirà més endavant, que els diferents atributs o variables segueixen, amb alguns matisos, distribucions aparentment normals (amb assimetries, biaixos, cues, etc). Indicar a mode d'exemple, que la distribució de l'atribut _alcohol_ sembla ser positivament esbiaixada, és a dir, la corba es desplaça cap a l'esquerra. Els atributs _densitat_ i _pH_ sí semblen seguir distribucions normals.
+
+<br/>
+
+_Bibliografia_:
+
+<https://en.wikipedia.org/wiki/Acids_in_wine#Citric_acid>
+
+<https://www.vinosycavasonline.es/los-aacidos-del-vino.-quae-son-y-caomo-se-forman.>
+
+<https://catatu.es/blog/el-azucar-en-el-vino/#:~:text=Los%20vinos%20tranquilos%20se%20rigen%20por%20la%20cantidad,18%20g%2Fl%20Semidulce%3A%20de%2018%20a%2045%20g%2Fl>
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 3.- Neteja de les dades.
+
+<br/>
+
+Es realitza un procès de neteja de dades abans de realitzar les diferents modelitzacions, revisant i tractant les dades que contenen zeros o elements buits i valors extrems.
+
+<br/>
+<br/>
+
+## 3.1.- Les dades contenen zeros o elements buits? Com gestionaries aquests casos?
+
+Es verifica inicialment si existeixen dades al _dataset_ que contenen elements buits representats amb el valor _NA_. Observant que no es detecta cap d'aquests valors. A més a més, d'haver-hi, haurien sortit en la funció ___summary()___, anteriorment executada.
+
+En cas que haguessin dades amb valors buits, _NA_, no es podria recuperar la informació buida ja que no es tracta d'una base de dades mostra i resultaria extremadament complicat intentar completar els camps buits tornant a obtenir la informació de l'anàlisi dels vins. Per tant, una posibilitat seria eliminar els registres que contenen valors buits.
+
+Es comprova el nombre d'_NA_ per cada atribut:
+
+```{r,eval=TRUE,echo=TRUE}
+nas <- lapply(wine_red, function(x){ sum(is.na(x))})
+nas
+```
+
+Ara, es comprova el nombre de zeros de cada atribut:
+
+```{r,eval=TRUE,echo=TRUE}
+zeros <- lapply(wine_red, function(x){ length(which(x==0))})
+zeros
+```
+
+I també es comprova el nombre de "" de cada atribut:
+
+```{r,eval=TRUE,echo=TRUE}
+buits <- lapply(wine_red, function(x){ length(which(x==""))})
+buits 
+```
+
+Es detecten zeros a l'atribut _citric.acid_, concretament 132 observacions. Com s'ha comentat abans, tot i que la presencia de _citric.acid_ en el raïm es poc abundant, sí està present en concentracions entre 0,1 i 1g/l. Per tant, es pot considerar que hauria de tenir algun valor diferent de zero, el fet de tenir-lo es considera com a valor perdut.
+
+Per decidir imputar algun valor, caldria tenir en compte per aquestes 132 observacions de _citric.acid_, a quin grup de _quality_ pertanyen. De forma que es podria veure com es troben distribuides. Aplicant després algun mètode per imputar valor a aquests zeros.
+
+```{r message= FALSE, warning=FALSE}
+# Creem un dataframe on hi han el valors 0
+citric.acid.zeros = subset(wine_red, wine_red$citric.acid==0)
+# Es realitza plot per veure la distribució
+plot(citric.acid.zeros$quality, main="Àcid cítric=0 distribuit per qualitat del vi", xlab="categoria", ylab= "freqüència")
+```
+
+Com es veu al gràfic, les categories 5 i 6 son les que més zeros tenen.
+
+```{r message= FALSE, warning=FALSE}
+# Càlculem el percentatge de valors 0 a àcid cítric per cada categoria del vi respecte al dataset de wine_red:
+citric.acid.zeros.p=round(100*table(citric.acid.zeros$quality)/table(wine_red$quality), 1)
+citric.acid.zeros.p
+```
+
+On el 30% de les observacions de _citric.acid_ es troben en la categoria del vi de valor 3 i el 18.9% a la categoria 4. Per tant, els vins de categoria inferior son els que concentran la major quantitat de zeros.
+
+Per imputar els valors perduts es poden aplicar diferents tècniques com la ***imputació de la mitjana***, on els valors perduts es substitueixen per la mitjana aritmètica dels valors observats. Un altre seria la ***imputació per regressió***, a partir d'obtenir un model regressiu (conjunt d'equacions de regresió), on els coeficients es cosntrueixen a partir de les dades existents. Aquestes equacions modelaran el comportament de la variable dependent o explicada i servirà per calcular els valors de les dades perdudes a partir de les variables independents o explicatives.
+
+En aquest treball s'aplicarà l'algorisme dels ***K-veins més propers (KNN)***. Seleccionant els k casos més propers al cas a imputar i posteriorment utilitzant-los per substituir el valor perdut per un imputat. Es farà mitjançant algun tipus de mètode que normalment es la mitjana aritmètica o la moda, depenent de si es tracta de variables continues o discretes (categóriques).
+
+Entrant en la imputació de valors perduts, en primer lloc se substitueixen aquest zeros de la variable _citric.acid_ per valors _NA_:
+
+```{r message= FALSE, warning=FALSE}
+# Es converteix els 0 en NAs per poder aplicar l'algoritme de KNN
+wine_red$citric.acid[wine_red$citric.acid == 0] <- NA
+summary(wine_red)
+```
+
+I després s'aplica l'algorisme ___kNN___ per fer la imputació d'aquests valors _NA_:
+
+```{r message= FALSE, warning=FALSE}
+# Creem un nou dataframe on guardar les dades amb imputacions:
+wine_red_x2=NULL
+# Iterem per a cada valor de quality, tenint en compte que el valor mínim es 3 i el màxim es 8:
+for (i in (3:8)){
+  # Delimitem cada grup:
+  wine_red_xquality=subset(wine_red, wine_red$quality==i)
+  # Fem les imputacions amb kNN():
+  vi_imputat = kNN(wine_red_xquality)
+  # Afegim el resultat al nou dataframe, eliminant les columnes informatives, només agafem les variables amb valors
+  wine_red_x2=rbind(wine_red_x2, vi_imputat[,1:12])
+}
+
+# Comprovem que no retorna valors 0 o NA 
+summary(wine_red_x2$citric.acid)
+```
+
+<br/>
+<br/>
+
+## 3.2.- Identificació i tractament de valors extrems.
+
+<br/>
+
+Segons les definicions, el valors extrems es troben almenys a 3 desviacions estàndard allunyats de la mitjana del conjunt de dades. Es realitzarà una identificació d'_outliers_ i es mostrarà amb un _boxplot_ i histograma el _dataset_ amb _outliers_ i sense _outliers_, per això es crearà una funció que mostrarà els gràfics i diferent informació corresponent al nombre d'_outliers_, la seva proporció, la mitjana dels _outliers_, la mitjana de la respectiva variable sense eliminar els _outliers_ i la mitjana d'aquesta eliminant els _outliers_.
+
+Per tenir una major precissió en la informació a identificar i en el tractament de valors extrems, es realitzarà l'estudi per cada variable del _dataset_ i dins de cada variable s'agruparà per cada qualitat del vi. Per tant, cada variable s'estudiarà a partir dels diferents grups per qualitat del vi (que conté valors entre 3 i 8), amb un total de 6 grups per cada variable. Això permetrà calcular els _outliers_ per sustituir amb valors propers que tenen el mateix valor de qualitat del vi.
+
+Com a tractament de valors extrems es decideix que no s'eliminaran sino que es substituiran per la mitja del valor de cada varaible dins del grup al que pertany (qualitat de vi).
+
+```{r,eval=TRUE,echo=TRUE}
+outlierKD <- function(dt, var, nom, i, j) {
+     var_name <- eval(substitute(var),eval(dt))
+     na1 <- sum(is.na(var_name))
+     m1 <- mean(var_name, na.rm = T)
+     par(mfrow=c(2, 2), oma=c(0,0,3,0))
+     boxplot(var_name, main="With outliers")
+     hist(var_name, main="With outliers", xlab=NA, ylab=NA)
+     outlier <- boxplot.stats(var_name)$out
+     mo <- mean(outlier)
+     var_name <- ifelse(var_name %in% outlier, NA, var_name)
+     boxplot(var_name, main="Without outliers")
+     hist(var_name, main="Without outliers", xlab=NA, ylab=NA)
+     title_main = paste("Valida outliers",colnames(dt)[j], " per quality", i, sep=" ")
+     title(main=title_main, outer=TRUE)
+     na2 <- sum(is.na(var_name))
+     
+     cat("Outliers identificats per la qualitat del vi:", i, ": ", na2 - na1, "\n")
+     cat("Proporció (%) de outliers:", round((na2 - na1) / sum(!is.na(var_name))*100, 1), "\n")
+     cat("Mitja dels outliers:", round(mo, 2), "\n")
+     m2 <- mean(var_name, na.rm = T)
+     cat("Mitja sense eliminar els outliers:", round(m1, 2), "\n")
+     cat("Mitja eliminant outliers:", round(m2, 2), "\n")
+      # Guardem els outliers en una llista:
+
+     for (k in outlier){
+      # Cerquem per a cada columna els valors extrems i els substituïm per la mediana:
+      dt[j][dt[j]==k]=round(mo, 2)
+     }
+     
+     return(dt)
+}
+```
+
+```{r,eval=TRUE,echo=TRUE}
+wine_red_x3 <- NULL
+
+for (i in (3:8)){
+  # Obtenim totes les variables per un grup de qualitat de vi
+  wine_quality <- subset(wine_red_x2, wine_red_x2$quality==i)
+  # Per cada variable s'actualitzarà 'wine_quality' amb el tractament d'outliers corresponent
+  wine_quality <- outlierKD(wine_quality, fixed.acidity, "fixed.acidity", i, 1)
+  wine_quality <- outlierKD(wine_quality, volatile.acidity, "volatile.acidity", i, 2)
+  wine_quality <- outlierKD(wine_quality, citric.acid, "citric.acid", i, 3)
+  wine_quality <- outlierKD(wine_quality, residual.sugar, "residual.sugar", i, 4)
+  wine_quality <- outlierKD(wine_quality, chlorides, "chlorides", i, 5)
+  wine_quality <- outlierKD(wine_quality, free.sulfur.dioxide, "free.sulfur.dioxide", i, 6)
+  wine_quality <- outlierKD(wine_quality, total.sulfur.dioxide, "total.sulfur.dioxide", i, 7)
+  wine_quality <- outlierKD(wine_quality, density, "density", i, 8)
+  wine_quality <- outlierKD(wine_quality, pH, "pH", i, 9)
+  wine_quality <- outlierKD(wine_quality, sulphates, "sulphates", i, 10)
+  wine_quality <- outlierKD(wine_quality, alcohol, "alcohol", i, 11)
+  # Actualització de totes les variables del dataset per un grup de quality concret. 
+  wine_red_x3=rbind(wine_red_x3, wine_quality)
+}
+
+str(wine_red_x2)
+str(wine_red_x3)
+```
+
+Després de la imputació dels outliers, com s'ha explicat, amb la mitjana de cadascun dels nivells de qualitat i per cadascuna de les diferents variables, aquests son els resultats més destacables:
+
+* Els valors atípics son 599 i es concentren en les categories 5 i 6 amb 467, el 78% dels total. Sens dubte perquè a aquestes qualitats es on es concentra la majoria de les observacions, el 82.45%.
+
+* Les variables que més valors atípics acumulen son, per ordre: residual.sugar amb 155 (el 26% del total), chlorides amb 99 (el 17%) i sulphates amb 73 (el 12%). Les quals suposen el 55% del total.
+
+* Per variables i categories, es residual.sugar en la 5 la que més valors extrems te, 66 (suposant l'11% del total). Seguida d'ella mateix per la categoria 6 amb 53 (9%) i sulphates en la categoria 5 amb 48 (8% del total).
+
+* Observant els histogrames per cadascuna de les variables i per categories, es podria afirmar que després de la imputació dels valors atípics, les variables majoritàriament segueixen una distribució normal o homologables amb la normalitat. Exemples de normals en serien: chlorides, density i sulphates per quality 5; residual.sugar, chlorides, density i pH per quality 6; etc. Altres amb esbiaixat a la dreta serien: total.sulfur.dioxide per quality 4 i 6, citric.acid per quality 5, free.sulfur.dioxide per quality 5 i 7, etc. I amb cua llarga per la dreta: fixed.acidity, residual.sugar i alcohol per quality 5; sulphates per quality 6; etc.
+
+* Resulten destacables els casos on amb la presència d'outliers no quedaba definida una distribució normal i imputant la mitjana de la respectiva categoria, esdevé normal. Es el cas de: residual.sugar, chlorides i sulphates tant per quality 5 i 6.
+
+<br/>
+
+Finalitzat el procés de tractament d'outliers i reanomenat el dataset a wine_red_x3, es poden apreciar alguns canvis significatius:
+
+```{r,eval=TRUE,echo=TRUE}
+summary(wine_red_x3)
+```
+
+  * S'han reduït les mitjanes de fixed.acidity, volatile.acidity, citric.acid, residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide, density, sulphates i alcohol. Només ha pujat la de pH.
+  
+  * El valor de la mediana també s'ha reduït per fixed.acidity, citric.acid, residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide, density, sulphates i per alcohol. No s'ha vist alterada per volatile.acidity i ha pujat per pH.
+  
+  * Els valors mínims han augmentat per fixed.acidity, residual.sugar, chlorides, density, pH i alcohol. I romanen igual volatile.acidity, citric.acid, free.sulfur.dioxide, total.sulfur.dioxide i sulphates.
+  
+  * Els valors màxims s'han reduït per totes les variables.
+  
+  * El primer quartil s'ha reduït per citric.acid, chlorides i density. Sense alteració per a fixed.acidity, volatile.acidity, residual.sugar, free.sulfur.dioxide, total.sulfur.dioxide, sulphates i alcohol. I només ha augmentat per pH.
+  
+  * I el tercer quartil ha disminuït per fixed.acidity, volatile.acidity, citric.acid, residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide, density, sulphates i alcohol. I no ha canviat per pH.
+
+<br/> 
+
+_Bibliografia_:
+
+<http://ai.fon.bg.ac.rs/wp-content/uploads/2017/09/WholesaleCustomersClustering_handout.pdf>
+
+<https://rpubs.com/YasmeenMubarak/462147>
+
+<https://www.r-bloggers.com/2016/04/identify-describe-plot-and-remove-the-outliers-from-the-dataset/>
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 4.- Anàlisi de les dades.
+
+<br/>
+<br/>
+
+## 4.1.- Selecció dels grups de dades que es volen analitzar/comparar (planificació dels anàlisis a aplicar).
+
+<br/>
+
+Per seleccionar els grups de dades que son més interesant per analitzar, cal centrar-se en les variables que tenen més relació amb la qualitat del vi. Primer es crearà una comparació de mitjana per veure la relació entre les diferents propietats del vi i la seva qualitat.
+
+Desprès es crearà una matriu formada per la mitjana de les diferents variables, agruapdes per qualitat. On a les columnes es trobarà les diferents variables i les files correspondran a cada grup de qualitat del vi.
+
+A continuació es ralitzarà una representació gràfica de la correlació entre els diferents parells de variables del _dataset_, on es podrà veure els que estan més relacionats entre ells.
+
+Finalment es mostrarà un mapa de calor, al que se li passarà la matriu numèrica creada previament.
+
+```{r message= FALSE, warning=FALSE}
+# Crearem una copia del dataset i la variable quality es passarà a numèrica
+wine_red_x31 <- wine_red_x3
+wine_red_x31$quality <- as.numeric(as.factor(wine_red_x3$quality))
+str(wine_red_x31)
+```
+
+Es calcula la matriu de correlacions entre les diferents variables, la qual cosa donarà una millor comprensió de com les entitats es correlacionen entre si i permetrà veure quines juguen un paper més important en la decisió de la qualitat del vi.
+
+```{r message= FALSE, warning=FALSE}
+ggcorr(wine_red_x31, nbreaks = 10, palette = "RdYlBu", geom = "tile", label = TRUE, label_size = 3, label_round = 2, label_alpha = TRUE, hjust = 1, size = 4, color = "black") + labs(title = "Correlació per parells de variables del dataset Wine_red")
+```
+
+A partir d'aquesta matriu es veuen algunes correlacions:
+
+- Algunes òbvies, com entre els atributs _pH_ i _fixed.acidity_, que tenen una correlació negativa relativament alta. Això s'explica per què un vi té un pH entre 2.8 i 4. Quan té el pH de 2.8 es extremadament àcid mentre que amb un pH de 4 es pla i no te acidesa.
+
+- També es pot observar una correlació positiva relativament alta entre _fixed.acidity_ i _citric.acidity_, així com entre _free.sulfur.dioxide_ i _total.sulfur.dioxide_.
+
+- La densitat té una forta correlació positiva amb _fixed.acidity_, mentre que té una forta correlació negativa amb _alcohol_.
+
+- Destaca la correlació positiva relativament alta entre la presencia d'_alcohol_ i _quality_.
+
+- Respecte a _quality_, s'observa que aproximadament la meitad de les variables es correlacionen positivament amb ella, mentre que l'altre meitad es correlacionen negativament.
+D'entre totes les variables se seleccionaran pel seu estudi les que tinguin nombres més grans, ja que son les que donen més informació. Concretament les que tinguin un valor més gran de 0.2. Aquestes característiques corresponen a _alcohol_, _sulphates_, _citric.acid_ i _volatile.acidity_.
+
+
+Es realitza un boxplot per cada característica del vi seleccionat per comparar amb els diferents grups de qualitat.
+
+<br/>
+
+***alcohol***
+
+```{r message= FALSE, warning=FALSE}
+ggplot(data = wine_red_x3, aes(y = alcohol , x = quality, fill= quality)) + geom_boxplot() + ggtitle("Alcohol per diferents qualitats del vi")
+```
+
+A partir del _boxplot_ es pot veure que els vins que tenen menys alcohol tenen pitjor qualificació, valors 3, 4 i 5. Mentre que els que tenen més alcohol obtenen un valor més alt en la qualitat. Per tant, hi ha un augment de la qualitat del vi quan es produeix un augment de l'acohol. La qualitat del vi està idrectament relacionada amb la quantitat d'alcohol del vi. Els punts que es troben fora del bigotis (linies que s'estenen des de la caixa rectangular) corresponen als outliers.
+
+<br/>
+
+***sulphates***
+
+```{r message= FALSE, warning=FALSE}
+ggplot(data = wine_red_x3, aes(y = sulphates , x = quality, fill=quality)) + geom_boxplot() + ggtitle("Sulfats per diferents qualitats del vi")
+```
+
+Pel cas de _sulphates_, els _boxplots_ mostres una relació linialment positiva amb _quality_. Així, el fet de tenir majors quantitats de _sulphates_ sembla que obtenen una major qualificació de la qualitat del vi.
+
+<br/>
+
+***citric.acid***
+
+```{r message= FALSE, warning=FALSE}
+ggplot(data = wine_red_x3, aes(y = citric.acid , x = quality, fill=quality)) + geom_boxplot() + ggtitle("Acid citric per diferents qualitats del vi")
+```
+
+Aquest cas es semblant al del _sulphates_, els _boxplots_ mostren una relació linialment positiva amb _quality_ del vi. Així, el fet de tenir majors quantitats de _citric.acid_ sembla que obtenen una major qualificació de la qualitat del vi.
+
+<br/>
+
+***volatile.acidity***
+
+```{r message= FALSE, warning=FALSE}
+ggplot(data = wine_red_x3, aes(y = volatile.acidity , x = quality, fill=quality)) + geom_boxplot() + ggtitle("Acid acètic per diferents qualitats del vi")
+```
+
+En el cas de _volatile.acidity_ s'observa que quan menys presència hi ha, el valor de _quality_ es més alt. I quant més _volatile.acidity_ conté, menys està valorat el vi.
+
+<br/>
+
+Creació d'una matriu amb les mitjanes de cada variable del _dataset_ agrupades per la variable _quality_.
+
+```{r message= FALSE, warning=FALSE}
+# Preparació d'una matriu amb les mitjanes per a cada tipus de qualitat:
+# Realitzem split per agrupar per cada valor de la variable quality
+wine_quality=split(wine_red_x3, wine_red_x3$quality)
+
+wine_matrix=NULL
+for (i in seq(3:8)){
+    wines= data.frame(wine_quality[i])
+    mitjanes=colMeans(wines[,1:11])
+    wine_matrix=rbind(wine_matrix,mitjanes)
+}
+# Afegim capçaleres a les columnes
+colnames(wine_matrix)=colnames(wine_red_x3[1:11])
+# Afegim nom a les files, on cadascuna correspon a una qualitat
+#row.names(wine_matrix)=c("Qualitat 3","Qualitat 4","Qualitat 5","Qualitat 6","Qualitat 7", "Qualitat 8")
+row.names(wine_matrix) <- paste("Qualitat ", 3:8)
+wine_matrix
+```
+
+A continuació es farà la representació d'una mapa de calor, amb la funció ___pheatmap___, per visualitzar dades quantitatives en dues dimensions, al que se li pasarà una matriu numèrica que contindrà els valors que es traçaran. Es tracta d'un model no-supervisat que permet definir _clusters_ i  visualitzar patrons. A banda d'estar basat en la distància.
+
+```{r message= FALSE, warning=FALSE}
+# El mapa de calor ens permetrà trobar patrons per cada grup de qualitat de vi.
+# Es mostraran els valors dins de cada cel·la.
+# Es visualitzarà el dendograma de files, on es mostren els clusters creats entre les variables de les propietats dels vins i el dendograma de columnes on realitza els clusters agrupant per qualitats del vi.
+heatmap <- pheatmap(as.matrix(t(wine_matrix)), display_numbers = TRUE,  number_color = "black", 
+         fontsize_number = 8, color = colorRampPalette(rev(brewer.pal(n = 10, name ="RdYlBu")))(100), scale = "row", cluster_rows = TRUE, cluster_cols = T, clustering_distance_cols = "euclidean", clustering_method = "ward.D2", fontsize = 10 , main = "Clustering de les propietats dels vins", show_rownames = T, cellwidth = 30)
+```
+
+Observant el mapa de calor es pot veure algun patró com el cas dels vins de qualitat més alta. On s'aprecia que tenen un valor més alt d'_alcohol_, _citric.acid_, _sulphates_ i _fixed.acidity_. Mentre que els vins de baixa qualitat tenen valors més alts de _residual.sugar_, _density_, _pH_, _volatile.acidity_ i _chlorides_. El vins de qualitat mitja tenen uns patrons elevats de sofre (_free.sulfur.dioxide_ i _total.sulfur.dioxide_) i per la resta de variables tenen uns valors intermedis.
+
+Aquest algorisme de mapa de calor també genera dendogrames, que en aquest cas es mostren els que corresponen a les columnes (pels grups de qualitat) i a les files (per les diferents variables). Aquests descriuen la proximitat entre les mostres basats en la distància euclídea. En aquest cas, tenim un _cluster_ que agrupa els vins de qualitat 7 i 8, que serien els superiors. Un altre que agrupa els vins de qualitat 5 i 6 i un tercer _cluster_ que agrupa els de qualitat 3 i 4 corresponen als vins de menys qualitat. Aquests _clusters_ estarien agrupats en funció de les propietats fisicoquímiques de les diferents variables. 
+
+<br/>
+
+_Bibliografia_:
+
+<http://briatte.github.io/ggcorr/>
+
+<https://r-charts.com/correlation/pheatmap/>
+
+<https://datavizpyr.com/heatmaps-in-r-with-pheatmap-package/>
+
+<https://betaeconomia.blogspot.com/2020/02/analisis-de-correlacion-en-r.html>
+
+<https://datauab.github.io/red_wine_quality/#:~:text=4.%20Data%20Cleaning%20and%20Checking%20%C2%B6%20%20,%20%201.9%20%206%20more%20rows%20>
+
+<https://www.aprenderdevino.es/ph-y-vino/#:~:text=El%20pH%20de%20la%20mayor%C3%ADa%20de%20los%20vinos,torno%20a%204%20es%20plano%2C%20carente%20de%20acidez.>
+
+<https://www.kaggle.com/sachinrajput17/red-wine-quality>
+
+<br/>
+<br/>
+
+## 4.2.- Comprovació de la normalitat i homogeneïtat de la variància.
+
+<br/>
+
+__Normalitat__
+
+Per comprovar la normalitat es visualitzarà primer els histogrames de freqüència per cada atribut, la qual cosa permetrà verificar si les dades segueixen una distribució gaussiana. També es generaran els gràfics quantil-quantil (_Q-Q_) que permetran comparar la distribució dels valors respecte als d'una població normal.
+
+```{r message= FALSE, warning=FALSE}
+# Comprovació de la distribució normal
+
+# Inicialització del Dataframe 
+normalitat=NULL
+# Fixem el format dels gràfics:
+par(mfrow=c(3,2))
+# Seguiment de les columnes del dataset wine_red:
+for (i in (1:11)){
+  # Histogrames de freqüència amb la funció density:
+  hist(rnorm(wine_red_x3[,i]),main=paste("Gràfic", ".",colnames(wine_red_x3)[i]),xlab= "",col="lightgreen")
+  par(new=T)
+  plot(density(rnorm(wine_red_x3[,i])),col=2,lwd=3,main='',sub='',xlab='',ylab='',labels=FALSE)
+  # Preparar gràfics de quantils amb les dades de cada variable:
+  qqnorm(wine_red_x3[,i],pch=19,frame=FALSE,cex=0.3,main="",xlab= "")
+  # Representar la líniea que adoptaria una població completament normal:
+  qqline(wine_red_x3[,i], col = "red", lwd = 1)
+}
+```
+
+S'observa que, mitjançant la comparació respecte als gràfics _Q-Q_, la majoria de variables segueixen un comportament normal. Llevat de _residual.sugar_, _chlorides_, _free.sulfur.dioxide_ i _total.sulfur.dioxide_, que presenten majors divergències respecte la _Q-Q_ (especialment per valors alts de les variables). Però mitjançant el __teorema del límit central__, es pot assumir normalitat en totes les variables.
+
+Per tant no cal aplicar cap altre test de normalitat (la mostra es suficientment gran per no fer us del test de ___Shapiro-Wilk___).
+
+<br/>
+
+__Homogeneitat de la variància__
+
+Es verifica a continuació l'__homogeneïtat de la variança__, es a dir, l'__homoscedasticitat__. Es farà servir la funció ___var.test()___ que permetrà aplicar el __test de la F__ d'___Snedecor___ pel següent contrast d'hipòtesis:
+
+$H_0: \sigma_A=\sigma_B$
+
+$H_1: \sigma_a\neq\sigma_B$
+
+Prenent la diagonal superior de la matriu resultant, a la taula a sota, s'observa que en tots el casos els _p-values_ son menors al nivell de significança ($\alpha = 0.05$), menys per les variables _volatile.acidity_ i _citric.acid_ que es major, 0.279. La qual cosa voldría dir que s'hauria de rebutjar la hipòtesi nul·la d'igualtat de variàncies per tots els parells de variables menys per _volatile.acidity_ i _citric.acid_, on no es podria rebutjar la hipòtesi nul·la d'igualtat de variàncies. Es a dir, només per a questes dues variables es podria assumir homoscedasticitat.
+
+```{r message= FALSE, warning=FALSE}
+# Igualtat de variàncies: homoscedasticitat
+
+# Dataframe on es guarden els resultats:
+homoscedasticitat=NULL
+# For loop que recorre totes les columnes dues vegades:
+for (i in (1:11)){
+  for (j in (1:11)){
+  # var.test() en forma de vis-a-vis (pairwise):
+  homo=var.test(wine_red_x3[,i], wine_red_x3[,j], alternative = c("two.sided"))$p.value
+  homoscedasticitat=cbind(homoscedasticitat, c(homo))
+  }
+}
+# Arranjament del dataframe:
+homoscedasticitat=round(matrix(unlist(homoscedasticitat), ncol = 11, byrow=T),3)
+colnames(homoscedasticitat)=colnames(wine_red_x3[1:11])
+row.names(homoscedasticitat)=colnames(wine_red_x3[1:11])
+# Considerem la matriu superior:
+homoscedasticitat[lower.tri(homoscedasticitat)]=NA
+# Matriu diagonal de p-valors per al test d'homoscedasticitat aplicat a les propietats del vi
+homoscedasticitat
+```
+
+<br/>
+
+_Bibliografia_:
+
+<https://rpubs.com/phobos/TLC>
+
+<https://stackoverflow.com/questions/16702137/remove-y-label-from-plot-in-r>
+
+<https://stackoverflow.com/questions/1154242/remove-plot-axis-values>
+
+<br/>
+
+## 4.3.- Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
+
+A partir d'aquest _dataset_ es poden obtenir interessants modelitzacions relacionades amb la qualitat del vi per donar resposta a les preguntes plantejades a l'apartat 1. Aquí s'han desenvolupat aquestes: un primer model de regressió lineal per poder fer prediccions dels components que determinaran la qualitat del vi. Un segon, molt relacionat amb el primer, de regressió logística per predir si un vi serà de qualitat o no. Un tercer model d'agregació per determinar si les diferents qualitats del vi s'han establert de forma correcta o les dades presenten agrupacions diferents. I un darrer model de classificació, per obtenir quines regles son les que determinen la qualitat del vi.
+
+<br/>
+<br/>
+
+__Model de regressió lineal__
+
+A continuació es treballa amb un model de __regressió lineal__ per predir la qualitat del vi en funció de les variables que tenien més correlació amb _quality_, que son: _alcohol_, _sulphates_, _citric.acid_ i _volatile.acidity_. Aquesta modelització ajudarà els enòlegs a prendre decisions pels atributs que els permeten tenir modificar certs aspectes dels vins segons el tipus que vulguin produir.
+
+Ja s'han estudiat les relacions entre aquestes variables, però com a primer pas, obtenim els seus diagrames de dispersió. On amb els diferents núvols de punts s'intueixen (no sempre de forma nítida) el sentit de les relacions (positives o negatives) i la inclinació de la possible recta de regressió. Evidenciant, com ja s'ha vist a la matriu de correlacions de l'apartat 4.1, que les relacions, encara que agafant les més destacades, no son excessivament fortes.
+
+```{r message= FALSE, warning=FALSE}
+# S'utilitza la funció "pairs".
+pairs(quality ~ alcohol + sulphates + citric.acid + volatile.acidity, data=wine_red_x3, main="Diagrames de dispersió", pch=0.01, cex=.09)
+```
+
+Ara es procedeix a la modelització, on en primer lloc es divideix el _dataframe_ __wine_red_x3__ aleatòriament en un 66% per a entrenar i un 33% per realitzar proves on la variable a predir serà _quality_. Es generaran dos models de regressió lineal amb les dades disposades de forma aleatòria (desordenades):
+
+* __model1__ amb les quatre variables amb major grau de relació: _alcohol_, _sulphates_, _citric.acid_ i _volatile.acidity_.
+
+* __model2__ només amb les dos variables amb major relació: _alcohol_ i _sulphates_.
+
+El millor models serà el que obtingui un coeficient de determinació $R^2$ més alt.
+
+```{r message= FALSE, warning=FALSE}
+set.seed(123)
+# Es desordenen les files del dataframe wine_red_x3, que es el que té quality com a numèric:
+wine_red_x3_random = wine_red_x31[sample(nrow(wine_red_x31)),]
+# Obtenim x i y descomposant la variables pregunta (y) de la resta (x).
+y = wine_red_x3_random[,length(wine_red_x31)] 
+X = wine_red_x3_random[, 1:length(wine_red_x31)-1]
+
+# Extraiem un terç del total de files:
+wine_red_x3terc= round(2/3*nrow(wine_red_x3_random))
+# Definim els conjunts d'entrenament i test en base a wine_red_x3terc:
+trainX <- X[1:wine_red_x3terc,]
+trainy <- y[1:wine_red_x3terc]
+testX  <- X[(wine_red_x3terc+1):nrow(wine_red_x3_random),]
+testy  <- y[(wine_red_x3terc+1):nrow(wine_red_x3_random)]
+
+#Definim 2 models amb regressors quantitaus segons les variables que més correlació tenen amb quality 
+model1 <- lm(trainy ~ alcohol + sulphates + citric.acid + volatile.acidity, data = trainX)
+model2 <- lm(trainy ~ alcohol + sulphates, data = trainX)
+
+model1
+model2
+# Avaluació de la qualitat dels models linials en base a R2:
+summary(model1)$r.squared
+summary(model2)$r.squared
+
+taula <- matrix(c(1, summary(model1)$r.squared,
+2, summary(model2)$r.squared),
+ncol = 2, byrow = TRUE)
+colnames(taula) <- c("Model", "R2")
+
+taula
+```
+
+Amb els resultats obtinguts, el __model1__ es el que presenta un coeficient de determinació major, $R^2=0.347$. Encara que certament, no es excessivament alt, ja que les quatre variables explicatives utilitzades (_alcohol_, _sulphates_, _citric.acid_ i _volatile.acidity_) només expliquen poc més d'un terç (el 34.7%) de la variància de la variable dependent _quality_.
+
+<br/>
+
+_Bibliografia_:
+
+_Regressió lineal múltiple_. Document PDF a Recursos d'aprenentatge de l'assignatura Estadística Avançada.
+
+<https://github.com/mrc03/Red-Wine-Quality-Accuracy-0.9175-/blob/master/wine%20quality.ipynb>
+
+<br/>
+<br/>
+
+__Model de regressió logística__
+
+Ara es realitza una modelització per establir si un vi serà d'alta qualitat (bo) o de baixa qualitat (dolent). Però abans s'ha de transformar la variable dependent, _quality_, perquè sigui dicotòmica. On prendrà el valor "1" per vins d'alta qualitat (valors majors o iguals a 7) i el valor "0" pels de baixa qualitat (menors a 7).
+
+```{r message= FALSE, warning=FALSE}
+# Es crea una copia del dataset i la variable quality es passa a numèrica
+wine_red_x32 <- wine_red_x3
+wine_red_x32$quality <- as.numeric(as.character(wine_red_x32$quality))
+
+# S'utilitza "ifelse" per la dicotomització
+wine_red_x32$quality <- ifelse(wine_red_x32$quality >= 7, 1, 0)
+```
+
+Ara ja es pot realitzar la modelització, que al igual que per al cas de regressió lineal, es faran dos models: un amb les quatre variables amb més alt grau de relació amb _quality_, i un altre amb únicament les dues variables amb més correlació amb la variable dependent.
+
+El resultat mostra de nou el model amb les 4 variables explicatives, com el que millor ajusta les dades. __model1_rl__ obté un __criteri d'informació d'Akaike__ (AIC) de 720.85, més baix que l'obtingut per __model2_rl__, que es de 770.49.
+
+```{r message= FALSE, warning=FALSE}
+#Definim 2 models amb regressors quantitaus segons les variables que més correlació tenen amb quality 
+model1_rl <- glm(quality ~ alcohol + sulphates + citric.acid + volatile.acidity, data = wine_red_x32)
+model2_rl <- glm(quality ~ alcohol + sulphates, data = wine_red_x32)
+
+# Avaluació de la qualitat dels models linials en base a R2:
+summary(model1_rl)
+summary(model2_rl)
+```
+
+Com es pot apreciar, també es comprova que s'acompleix que les variables seleccionades pels dos models (__model1_rl__ i __model2_rl__) son significatives. Utilitzant el __test de Wald__ pel contrast d'hipòtesi de nul·litat dels paràmetres, s'aprecia que a _Coefficients_ (taula de resultats) el _p-value_ associat, _Pr(>|t|)_, es menor al nivell de significança 0.05.
+
+<br/>
+
+_Bibliografia_
+
+_Models de regressió logística_. Document PDF a Recursos d'aprenentatge de l'assignatura Estadística Avançada.
+
+<br/>
+<br/>
+
+__Model d'agregació (***clustering***)__
+
+Seguint amb les respostes a les qüestions formulades a l'apartat 1, ara es pretén contestar si les diferents qualitats del vi que es troben en el _dataset_ objecte d'estudi, responen a una correcta classificació. Amb aquest objectiu es construeix un model d'agregació per determinar si les agrupacions o _clusters_ derivades dels valors dels diferents components del vi, determinen el seu grau de qualitat i si aquest es correcte amb la classificació que es fa a la variable _qualtiy_ del _dataset_.
+
+El _dataset_ que es fa servir, es podria dir que ja fa una classificació supervisada, com així ho determina la variable _quality_. Però aquí es fa servir un mètode no supervisat, es a dir, es transforma el problema supervisat original en un de no supervistat. Amb la qual cosa, no es farà servir la variable _quality_, que es aquella que es pretén predeir. Aleshores es farà servir la resta de variables per predir la qualitat del vi.
+
+Per realitzar aquesta modelització es fa servir l'algorisme ___kmenas___ i el primer pas serà agafar les dades, som s'ha dit, sense la variable _quality_:
+
+```{r message= FALSE, warning=FALSE}
+# S'agafa el dataset amb les dades netes
+dades_agr <- wine_red_x3[,1:11]
+```
+
+Com no es coneix el nombre de _clusters_ òptim, es prova amb diferents valors. Es fa tenint en compte que la variable _quality_ tenia 6 classes que corresponia a aquests graus de qualitat: 3, 4, 5, 6, 7 i 8. Aleshores es prova amb valors de 2 a 8 i es mostra a una gràfica la silueta mitjana de cada prova per determinar quin nombre d'agregacions seria el millor.
+
+El resultat mostra que el millor valor que s'obté es per a un k=2, però com que se sap que hi ha més graus per determinar la qualitat, s'utilitza el mètode ___elbow___ (colze), que no es més que l'anàlisi visual, on el k òptim es trobarà al colze de la gràfica. Es a dir, quan la corba comença a estabilitzar-se. En aquest cas, es podria afirmar que aquest punt estaria situat en un k al voltant del valor 5 i 6.
+
+```{r message= FALSE, warning=FALSE}
+set.seed(123)
+
+# Es fa amb les funcions dasy i silhouette
+d <- daisy(dades_agr) 
+resultats <- rep(0, 8)
+for(i in c(2,3,4,5,6,7,8))
+{
+  fit <- kmeans(dades_agr, i)
+  y_cluster <- fit$cluster
+  sk <- silhouette(y_cluster, d)
+  resultats[i] <- mean(sk[,3])
+}
+
+# S'obté la gràfica amb els valors de la silueta
+plot(2:8,resultats[2:8],type="o",col="blue",pch=0,xlab="Nombre de clusters",ylab="Silueta")
+```
+
+Per determinar quin es el valor de k millor, s'aplica l'algorisme ___kmeans___ pels valors 5 i 6. I es visualitza mitjançant la funció ___clusplot___, que com s'aprecia no aporta massa evidència.
+
+```{r message= FALSE, warning=FALSE}
+# S'aplica kmeans per k=5
+fit5 <- kmeans(dades_agr, 5)
+# Identificador de k=5
+k5 <- fit5$cluster
+
+# S'aplica kmeans per k=6
+fit6 <- kmeans(dades_agr, 6)
+# Identificador de k=6
+k6 <- fit6$cluster
+
+par(mfrow=c(1,2))
+clusplot(dades_agr, fit5$cluster,color=TRUE,shade=TRUE,lines=0,main="k = 5")
+clusplot(dades_agr, fit6$cluster,color=TRUE,shade=TRUE,lines=0,main="k = 6")
+```
+
+Per tant s'haurà d'avaluar la qualitat de l'agregació. Es fa amb la funció ___silhouette___ que calcularà la silueta per un k=5 i k=6. La funció ___silhouette___ retorna per a cada mostra el _cluster_ on s'ha assignat, el _cluster_ veí i el valor de la silueta. Així que calculant la mitjana de la silueta (posició 3) s'obtindrà una estimació de la qualitat de l'agrupament.
+
+El resultat mostra una mitjana major per una agrupació de __k=5__, per tant aquest nombre serà l'òptim. Confirmant-se que la classificació de la variable _quality_, amb 6 classes, no es la millor.
+
+```{r message= FALSE, warning=FALSE}
+# Es calcula la silueta de cada mostra
+sk5 <- silhouette(k5,d)
+sk6 <- silhouette(k6,d)
+
+# mitjana de la silueta
+mean(sk5[, 3])
+mean(sk6[, 3])
+
+```
+
+<br/>
+<br/>
+
+__Model de classificació__
+
+Per respondre a la darrera pregunta de l'apartat 1, si existeixen paràmetres, patrons o regles que determinen la qualitat d'un vi, es realitza una model de classificació. En concret es modelitzarà un arbre de decisió. L'interès rau en descriure la relació entre la qualitat d'un vi (que es descriurà entre bo i dolent, com ja s'ha estat fent al llarg d'aquest treball) i cadascuna de les variables o components del vi.
+
+Aleshores, l'objectiu es crear un arbre de decisió per analitzar què determina que un vi sigui bo. On la variable que es classificarà en bo o dolent, serà _quality_. Així que abans de res, transformarem la variable a classificar a _character_, seguint la regla que ja s'ha fet servir: el valor "Bo" per vins d'alta qualitat (valors majors o iguals a 7) i el valor "Dolent" pels de baixa qualitat (menors a 7).
+
+```{r message= FALSE, warning=FALSE}
+# Es crea una copia del dataset i la variable quality es passa a character
+wine_red_x33 <- wine_red_x3
+wine_red_x33$quality <- as.character(wine_red_x33$quality)
+
+# S'utilitza "ifelse" per la dicotomització
+wine_red_x33$quality <- ifelse(wine_red_x33$quality >= 7, "Bo", "Dolent")
+```
+
+El següent pas, i com s'ha de crear una mostra per entrenament (_trining_) i una altra per prova (_test_), serà desordenar les dades. De forma que aquestes, per cadascuna de les mostres, presenten una estructura molt semblant.
+
+```{r message= FALSE, warning=FALSE}
+set.seed(123)
+# Es desordena i reanomena el dataset
+wine_red_x33_random <- wine_red_x33[sample(nrow(wine_red_x33)),]
+```
+
+Després es determina la variable a classificar, que es _quality_, la darrera del _dataset_.
+
+```{r message= FALSE, warning=FALSE}
+set.seed(456)
+# Es determina la variabla a classificar:
+y_c <- wine_red_x33_random[,12] 
+x_c <- wine_red_x33_random[,1:11] 
+```
+
+I s'efectue les particions, establint que la d’entrenament serà de 2/3 i la de prova d’1/3. Es fa amb la creació d'un rang.
+
+```{r message= FALSE, warning=FALSE}
+set.seed(789)
+indexs = sample(1:nrow(wine_red_x33_random), size=floor((2/3)*nrow(wine_red_x33_random)))
+train_x <- x_c[indexs,]
+train_y <- y_c[indexs]
+test_x  <- x_c[-indexs,]
+test_y  <- y_c[-indexs] 
+```
+
+Abans de la modelització, simplement queda fer una ullada a les mostres (_train_ i _test_) per veure que no tenen excesives diferències.
+
+```{r message= FALSE, warning=FALSE}
+summary(train_x)
+summary(test_x)
+```
+
+Ara ja es pot realitzar la modelització de l'arbre de decisió utilitzant l'algorisme ___C5.0___ de ___Quinlan___. On en primer lloc s'obté el resultat amb les dades de _train_.
+
+```{r message= FALSE, warning=FALSE}
+set.seed(123)
+# S'utilitza l'algorisme C50
+model_C50 <-  C5.0(train_x, as.factor(train_y),rules=TRUE)
+
+# S'observen els resultats:
+summary(model_C50)
+```
+
+S'han obtingut 15 regles (8 per classificar "Bo" i 7 per "Dolent") on el percentatge de classificacions errònies entre vins bons i dolents, es del __7.0%__ (75 casos mal classificats d'un total de 1066). Les regles semblen clares, però es comenten la millor que classifica el vi "bo" i la millor que classifica el vi "dolent":
+
+- ***Regla 1***: si un vi conté _volatile.acidity_ major a 0.27$g/dm^3$ i menor o igual a 0.37$g/dm^3$ , _total.sulfur.dioxide_ menor o igual a 45$g/dm^3$, _sulphates_ major a 0.8$g/dm^3$ i _alcohol_ major a 10.75%; serà "Bo" amb una probabilitat del 94.7%.
+
+- ***Regla 9***: si un vi conté _residual.sugar_ menor o igual a 3.3$g/dm^3$, _density_ major de 0.99785$g/cm^3$, _sulphates_ menor o igual a 0.81$g/dm^3$ i _alcohol_ menor o igual a 10.75%; serà "Dolent" en una probabilitat del 98.0%. 
+
+I per finalitzar, es valida el model amb les dades de _test_ (reservades), per veure l'eficiència de la seva predicció. Que com s'aprecia, es d'un 85.55%.
+
+```{r message= FALSE, warning=FALSE}
+# S'utilitza la funció "predict"
+prediccio_model_C50 <- predict(model_C50, test_x, type="class")
+print(sum(prediccio_model_C50 == test_y) / length(prediccio_model_C50))
+```
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 5. Representació dels resultats a partir de taules i gràfiques.
+
+A continuació es resumeixen els resultats obtinguts amb les diferents modelitzacions realitzades.
+
+<br/>
+<br/>
+
+__Resultat del model de regressió lineal__
+
+Es realitza la predicció i avaluació de la precisió del model amb la funció ___predict()___:
+
+```{r message= FALSE, warning=FALSE}
+# Predicció de qualitat amb el model 2
+dades <- data.frame(alcohol=testX$alcohol, sulphates=testX$sulphates, volatile.acidity=testX$volatile.acidity, citric.acid=testX$citric.acid)
+prediccio=unname(predict(model2, dades))
+prediccio
+
+# Recompte quantes equivalència entre les prediccion si els valors origninals per a qualitat de vi hi ha.
+# Obtenim la diferència entre els valors de qualitat i tenim en compte quant són encerts (valor 0) per estimar la precisió:
+rr=round(prediccio-testy)
+table(rr==0)
+Perc = 100*table(rr==0)/length(testy)
+Perc
+```
+
+Una vegada aplicada la funció ___predict()___ segons el __model1__, es compara les vegades que hi ha hagut una coincidència entre la predicció (_perdict_) i les dades reals (_testY_). Tot seguit, es calcula percentatge d'encerts. Pel __model1__ el percentatge d'encert, que representa la __precisió del model1__, es del __59.1%__. Això indica que és capaç de predir correctament giarebé 6 de cada 10 de les observacions a partir de les variables que se li proporcionen.
+
+I també es realitza la diagnosi d'aquest __model1__, que consisteix en analitzar els seus residus a través del seu diagrama de dispersió. On es pot apreciar que per __model1__ els valors ajusats hi son a l'eix d'abscisses i els ressidus al d'ordenades. Un model correcte hauria de tenir un núvol de punts sense cap estructura i situar-se a prop de l'eix d'abscisses. En aquest cas no s'observa cap estructura de forma nítida o definida i els valors no disten en excés de zero, amb la qual cosa el model deuria ser acceptablement correcte.
+
+Per observar la normalitat de la distribució dels errors, s'utilitza el gràfic _Q-Q_, per comparar-la amb una hipotètica distribució normal perfecta. On tot i alguna divergència, es pot assumir la normalitat dels errors.
+
+```{r message= FALSE, warning=FALSE}
+# s'obtenen els residus amb "rstandard"
+residus<-rstandard(model1)
+
+par(mfrow=c(1,2))
+# Diagrama de valors ajustats i residus
+plot(fitted.values(model1),rstandard(model1),xlab="Valors ajustats",ylab="Residus",pch=0.5, cex=0.5) 
+abline(h=0, col="red")
+
+# Es dibuixa el gràfic "QQplot" pels residus
+qqnorm(residus)
+qqline(residus)
+```
+
+<br/>
+
+_Bibliografia_:
+
+_Regressió lineal múltiple_. Document PDF a Recursos d'aprenentatge de l'assignatura Estadística Avançada.
+
+<br/>
+<br/>
+
+__Resultat del model de regressió logística__
+
+Per mesurar la bondat de l'ajust d'aquest model de regressió logística, s'utilitza __el test__ ___Hosman-Lemeshow___. On el test compara els valors previstos pel model amb els valors observats. La hipòtesi nul·la ($H_0$) indicarà que no hi ha diferència entre els valors observats i pronosticats i el seu rebuig ($H_1$) que el model no està ben ajustat.
+
+El resultat del test dona un _p-value_, 0.4196, major que el nivell de significança, 0.05. Amb la qual cosa no es pot rebutjar la hipòtesi nul·la, es a dir, s'ha de concloure en què el model ajusta bé les dades.
+
+```{r message= FALSE, warning=FALSE}
+# Es realitza el test
+hoslem.test(wine_red_x32$quality,fitted(model1_rl))
+```
+
+Per testejar la capacitat predictiva del model de regressió logística, es pot utilitzar les corbes ROC. Que proporcionen una forma de seleccionar les modelitzacions més òptimes, basada en la qualitat de la classifiació. Per a la qual cosa es calcula l'àrea sota la corba o ___AUROC___.
+
+Aquí es compararen les corbes _ROC_ i les àrees _AUROC_ dels models realitzats: __model1_rl__ i __model2_rl__, d'aquesta forma es pot comparar els resultats obtinguts.
+
+```{r message= FALSE, warning=FALSE}
+par(mfrow=c(1,2))
+
+# Primer es fa la corba pel model1_rl, on es necessita crear el predictor.
+# Després s'utilitza la funció ROC, on el primer argument es la variable
+# dependent dicotòmica, el segon el predictor i el tercer el dataset
+# wine_red_x32. Per finalitzar es fa el gràfic i es calcula l'àrea. 
+model1_rl_p = predict(model1_rl,wine_red_x32,type="response")
+model1_rl_p = roc(wine_red_x32$quality,model1_rl_p,data=wine_red_x32)
+plot(model1_rl_p)
+auc(model1_rl_p)
+
+# Es fa el mateix pel model model2_rl
+model2_rl_p = predict(model2_rl,wine_red_x32,type="response")
+model2_rl_p = roc(wine_red_x32$quality,model2_rl_p,data=wine_red_x32)
+plot(model2_rl_p)
+auc(model2_rl_p)
+```
+
+Els resultats obtinguts son força semblants, amb __model1_rl__ l'àrea _AUROC_ es de 0.867 i amb el __model2_rl__ de 0.8449. Però, confirmant-se el que ja s'havia vist amb l'_AIC_, el primer es una mica millor. Però per ambdós casos, les modelitzacions discriminen de forma excel·lent (ja que $0.8 \le AUROC < 0.9$).
+
+<br/>
+
+_Bibliografia_
+
+* _Models de regressió logística_. Recursos d'aprenentatge. Document PDF a Recursos d'aprenentatge de l'assignatura Estadística Avançada.
+
+<br/>
+<br/>
+
+__Resultat del model d'agregació (***clustering***)__
+
+Com ja s'ha explicat, amb la modelització ___kmeans___ s'evidencia que l'agregació òptima de la qualitat del vi es de 5 _clusters_, a diferència de les classes de la variable _quality_ que en te 6 (3, 4, 5, 6, 7 i 8). Per tant, aquesta darrera classificació no resultava correcta i es més adient l'obtinguda amb el model d'agregació.
+
+Però paga la pena observar com es comporta aquest resultat amb ___kmeans___ respecte a la classificació de la variable _quality_. Ja que a banda de comprovar-se la no idoneïtat de la classificació per _quality_ del _dataset_, s'identifiquen les variables que diferencien millor els grups o _clusters_.
+
+Amb aquest objectiu, en primer lloc s'obté el _clustering_ agafant les variables 2 a 2. Que com es pot observar, tot i que amb certa dificultat, destaca _total.sulfur.dioxide_ perquè diferencia molt nítidament els 5 _clusters_ i per gairebé totes les variables.
+
+```{r message= FALSE, warning=FALSE}
+# Agrupació amb kmeans
+vins_k_5 <- kmeans(dades_agr, 5)
+
+# Visualitzar el clustering agafant les variables 2 a 2
+pairs(dades_agr, main="kmeans clustering amb k = 5", panel=panel.smooth, pch=21, bg=c("red","green","blue", "yellow", "black")[unclass(fit5$cluster)],lwd=2,lty=2)
+```
+
+S'aprecia amb major claredat agafant únicament aquesta variable junt amb _density_ (que es la que la precedeix), com es pot veure baix a la gràfica _kmean clustering_ on els _clusters_ estan perfectament definits amb els diferents colors. A banda de què es comprova que el resultat de la modelització no es correspon en absolut amb la classificació original del _dataset_ (variable _quality_), a la gràfica _Dataset_ les agrupacions originals de les dades estan molt desordenades. Establint-se també, _total.sulfur.dioxide_, com la variable que millor classifica les dades.
+
+```{r message= FALSE, warning=FALSE}
+par(mfrow=c(1,2))
+
+# Gràfica amb l'agrupació kmeans 
+plot(dades_agr[c(7,8)], col=vins_k_5$cluster, pch=0.2, cex=0.2, main= "kmean clustering")
+
+# Agrupació de la variable quality
+plot(dades_agr[c(7,8)], col=wine_red_x3$quality, pch=0.2, cex=0.2, main="Dataset")
+```
+
+Per finalitzar, es pot obtenir el _cluster_ al que pertany cadascuna de les observacions.
+
+```{r message= FALSE, warning=FALSE}
+vins_k_5$cluster
+```
+
+<br/>
+<br/>
+
+__Resultat del model de classificació (***arbre de decisió***)__
+
+Amb aquesta modelització d'arbre de decisió, en la que s'ha utilitzat l'agorisme ___C5.0___, s'han obtingut 15 regles que determinen un vi "Bo" i un de "Dolent". En primer lloc es visualitza l'arbre del model:
+
+```{r, fig.width=30, fig.height=10} 
+set.seed(123)
+# Es visualitza l'arbre de decisió resultant
+model_C50 <- C5.0(train_x, as.factor(train_y), type = "simple")
+plot(model_C50)
+```
+
+Per resumir les dades de la modelització s'obté aquesta matriu de confusió:
+
+```{r message= FALSE, warning=FALSE}
+confusionMatrix(table(test_y,Predicted=prediccio_model_C50))
+```
+
+I per veure més en detall tota la informació referent al nombre de classificacions correctes i incorrectes, s'obté aquesta altra matriu de confusió:
+
+```{r message= FALSE, warning=FALSE}
+CrossTable(test_y, prediccio_model_C50,prop.chisq  = FALSE, prop.c = FALSE, prop.r =FALSE,dnn = c('Reality', 'Prediction'))
+```
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 6. Resolució del problema. A partir dels resultats obtinguts, quines són les conclusions? Els resultats permeten respondre al problema?
+
+Després de la realització de les diferents modelitzacions per contestar les preguntes o problemes plantejats, aquestes son les conclusions:
+
+<br/>
+
+El __model de regressió lineal__ pretén mostrar quines propietats fisioquímiques o característiques (que correspon a les variables del _dataset_) determinen la qualitat d'un vi. Amb aquest objectiu s'ha plantejat un model de regressió lineal on la variable explicada o dependent es _quality_ i les explicatives o indepedents son aquelles que tenen un coeficient de correlació major, aquestes son: _alcohol_, _sulphates_, _citric.acid_ i _volatile.acidity_. El coeficient de determinació obtingut es 34.76%, el qual indica un escàs grau d'ajust de la recta de regressió als valors de _quality_ (només explica un poc més d'un terç de la variància de les seves observacions). Però avaluant la precisió del model (entre les dades d'entrenament i test), s'arriba a un percentatge d'encerts de 59.1%. La qual cosa vol dir que la capacitat de predicció del model a partir d'aquests components del vi (variables explicatives), no es gens menyspreable.
+
+<br/>
+
+Després, amb el __model de regressió logística__, de forma molt semblant a la regressió lineal, es vol predir si la qualitat del vi serà bona o dolenta (reduïnt la variable dependent _quality_ en dues classes: "1" bons i "0" dolents). On s'utilitzen les mateixes variables explicatives del model anterior i on els resultats mostren un índex ___AIC___ menor, 720.85, per la modelització quan s'inclouen les quatre variables explicatives més correlacionades amb la variable dependent. La capacitat predictiva d'aquest model, mesurada amb l'àrea _AUROC_, dona un resultat de 0.867. Es a dir, el model discrimina de manera excelent. Es a dir, la capacitat d'aquest model per predir si un vi serà bo o dolent, es força acurat.
+
+<br/>
+
+Seguint amb les conclusions, per la resposta a la pregunta de quantes classes de vi existeixen en funció de la qualitat, s'ha realitzat un ___model d'agregació___ amb l'algorisme ___kmenas___. On la qualitat d'aquesta modelització, mesurada amb la mitjana de la silueta (_silhouette_), es la que correspon a una agrupació de ___k___=__5__ (millor que per _k_=6), amb un resultat de 0.432. No sembla una xifra per la mitjana excesivament elevada, però sí ho es per determinar que la millor agrupació es amb 5 _clusters_. El model també estableix la variable _total.sulfur.dioxide_, com la que millor classifica (com s'ha vist a l'apartat anterior) les dades pels diferents _clusters_.
+
+<br/>
+
+I per finalitzar, s'ha donat resposta a la pregunta de si existeixen regles que determinen quins paràmetres o components expliquen la qualitat d'un vi, amb la realització d'un __model de classificació__ (arbre de decisió). On mitjançant l'algorisme ___C5.0___, s'han obtingut 15 regles. On 8 d'aquestes classifiquen el vi en "bo" (amb una probabilitat d'entre 0.59 i 0.947) i 7 en "dolent" (amb probabilitat d'entre 0.925 i 0.980). L'eficiència del model, entre els resultats d'entrenament i test, dona un índex de 85.55%. Xifra molt positiva que indica que les regles establertes son sòlides.
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+# 7. Codi: Cal adjuntar el codi, preferiblement en R, amb el que s’ha realitzat la neteja, anàlisi i representació de les dades. Si ho preferiu, també podeu treballar en Python.
+
+
