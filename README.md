@@ -24,20 +24,20 @@ Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha
 
 ***REQUERIMENTS TECNICS:***
 
-* Per l'execució del fitxer Rmd en rStudio, es necessari la instal·lació de les seguents llibreries:
+Per l'execució del fitxer Rmd en rStudio, es necessari la instal·lació de les seguents llibreries:
 
-library(ggplot2)
-library(kableExtra) 
-library(VIM)
-library('GGally')
-library('pheatmap')
-library('RColorBrewer')
-library(ResourceSelection)
-library(pROC)
-library(cluster)
-library(C50)
-library(gmodels)
-library(caret)
+* library(ggplot2)
+* library(kableExtra) 
+* library(VIM)
+* library('GGally')
+* library('pheatmap')
+* library('RColorBrewer')
+* library(ResourceSelection)
+* library(pROC)
+* library(cluster)
+* library(C50)
+* library(gmodels)
+* library(caret)
 
 
 ***DOI:*** (aquí adreça de ZENODO)
