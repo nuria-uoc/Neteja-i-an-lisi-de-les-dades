@@ -3,7 +3,7 @@
 ## Màster Universitari en Ciència de Dades (Universitat Oberta de Catalunya, UOC).
 
 ### Assignatura:  M2.951.Tipologia i cicle de vida de les dades. Aula 1.
-### Practica 1: *Web scraping*.
+### Practica 2: *Neteja i anàlisi de les dades*.
 
 
 ***EQUIP DE TREBALL:***
@@ -12,23 +12,32 @@ L'equip ha estat format per Núria Aguilera i Joan Antoni Reina. Núria es gradu
 
 ***DESCRIPCIÓ DE LA PRÀCTICA:***
 
-Per la realització d'aquesta pràctica de *Web scraping* s'ha escollit la temàtica de les criptomonedes, un àmbit on la tecnologia i les finances conflueixen, de màxima actualitat i amb un evident desenvolupament futur. On l'objectiu ha estat l'elaboració d'un *dataset* mitjançant *Python* que conté informació al voltant de la cotització al tancament del darrer dia, de les cent criptomonedes més importants per capitalització. De forma que resulta de gran utilitat analítica pels potencials inversors. 
+Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha escollit el *dataset* winequality-red.csv del repositori de <kaggle.com> a <https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009>.
+
 
 ***CONTINGUTS:***
 
-* Document en format pdf amb la resolució de la pràctica: PRA1_Criptomonedes_NA_JAR_Web_Scraping.pdf
-* Arxiu Jupyter Notebook amb el codi Python: Criptomonedes_Historical_Data.py
-* *Dataset*: Criptomonedes_Historical_Data_20210327.csv
+* Document en format Rmd amb la resolució de la pràctica: Tipologia_PRA2_aguilera_reina.Rmd
+* Arxiu HTML: Tipologia_PRA2_aguilera_reina.html
+* *Dataset*: winequality-red.csv
+
 
 ***REQUERIMENTS TECNICS:***
-* Per l'execució de l'script es necessari la instal·lació de les seguents llibreries:
-pip install pandas
-pip install request
-pip install beautifulsoup
-pip install Selenium
 
-* Es necessari instal·lar chromedriver, per això cal:
-- Descarregar a:  https://sites.google.com/a/chromium.org/chromedriver/home
-- Descomprimir i guardar a la C:/
+* Per l'execució del fitxer Rmd en rStudio, es necessari la instal·lació de les seguents llibreries:
+
+library(ggplot2)
+library(kableExtra) 
+library(VIM)
+library('GGally')
+library('pheatmap')
+library('RColorBrewer')
+library(ResourceSelection)
+library(pROC)
+library(cluster)
+library(C50)
+library(gmodels)
+library(caret)
+
 
 ***DOI:*** (aquí adreça de ZENODO)
