@@ -12,7 +12,7 @@ L'equip ha estat format per Núria Aguilera i Joan Antoni Reina. Núria es gradu
 
 ***DESCRIPCIÓ DE LA PRÀCTICA:***
 
-Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha escollit el *dataset* winequality-red.csv del repositori de <kaggle.com> a <https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009>.
+Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha escollit el *dataset* winequality-red.csv del repositori de <https://www.kaggle.com/> a <https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009>.
 
 
 ***CONTINGUTS:***
