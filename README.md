@@ -1,7 +1,7 @@
-# Màster Universitari en Ciència de Dades (Universitat Oberta de Catalunya, UOC).
+# Màster Universitari en Ciència de Dades. Universitat Oberta de Catalunya, UOC
 
-## Assignatura:  M2.951.Tipologia i cicle de vida de les dades. Aula 1.
-### Practica 2: *Neteja i anàlisi de les dades*.
+## Assignatura:  M2.951.Tipologia i cicle de vida de les dades. Aula 1
+### Practica 2: *Neteja i anàlisi de les dades*
 
 
 ***EQUIP DE TREBALL:***
