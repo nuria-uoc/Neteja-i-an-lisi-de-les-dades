@@ -1,0 +1,1 @@
+# Neteja-i-an-lisi-de-les-dades
