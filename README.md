@@ -24,6 +24,7 @@ Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha
 * Document en format Rmd amb la resolució de la pràctica: Tipologia_PRA2_aguilera_reina.Rmd
 * Arxiu HTML: Tipologia_PRA2_aguilera_reina.html
 * *Dataset*: winequality-red.csv
+* Fitxer amb les dades finals analitzades: wine_red_final.csv
 
 <br/>
 <br/>
