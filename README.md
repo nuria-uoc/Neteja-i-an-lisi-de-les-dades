@@ -14,7 +14,7 @@ L'equip ha estat format per Núria Aguilera i Joan Antoni Reina. Núria es gradu
 
 ***DESCRIPCIÓ DE LA PRÀCTICA:***
 
-Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha escollit el *dataset* winequality-red.csv del repositori de <https://www.kaggle.com/> a <https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009>. Un joc de dades on s'arrepleguen aquells components que determinen la qualitat del vi. I que permet tant la realització de diferents tècniques de neteja de dades, com el tractament tant de valors perduts com de valors extrems, així com l'ús de diferents modelitzacions com son les de regressió (tant lineal com logística), d'agregació (*clustering*) i de classificació (*arbres de decisió*).
+Per la realització d'aquesta pràctica de *Neteja i anàlisi de les dades* s'ha escollit el *dataset* winequality-red.csv del repositori de <https://www.kaggle.com/> a <https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009>. 
 
 <br/>
 <br/>
