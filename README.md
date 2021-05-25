@@ -7,7 +7,7 @@
 
 ***EQUIP DE TREBALL:***
 
-L'equip ha estat format per Núria Aguilera i Joan Antoni Reina. Núria es graduada en Telecomunicacions, Electrònica i Direcció i Administració d'Empreses (ADE) i Joan Antoni en Economia i diplomat en estudis avançats (DEA Economia Aplicada). Ambdós amb llargues trajectòries profesionals en el món de la consultoria tecnològica i l'empresa.
+L'equip ha estat format per Núria Aguilera i Joan Antoni Reina. Núria es graduada en Telecomunicacions, Electrònica i Direcció i Administració d'Empreses (ADE) i Joan Antoni en Economia i diplomat en estudis avançats (DEA Economia Aplicada). Ambdós amb llargues trajectòries profesionals en el món de la consultoria tecnològica i l'empresa. Un joc de dades on s'arrepleguen aquells components que determinen la qualitat del vi. I que permet tant la realització de diferents tècniques de neteja de dades, com el tractament tant de valors perduts com de valors extrems, així com l'ús de diferents modelitzacions com son les de regressió (tant lineal com logística), d'agregació (*clustering*) i de classificació (*arbres de decisió*).
 
 <br/>
 <br/>
